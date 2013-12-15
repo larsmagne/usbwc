@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+$match = $ARGV[0];
+$duration = $ARGV[1];
+
+if (! $match || ! $duration) {
+    print "Usage: usbwc <string> <seconds>\n";
+    exit;
+}
+
+$device_file = "/sys/kernel/debug/usb/devices";
+$start_time = time;
+
+open(DEVS, $device_file) || die;
+
+# Find the right bus and device number.
+while (<DEVS>) {
+    # The ID lines look like
+    # T:  Bus=04 Lev=00 Prnt=00 Port=00 Cnt=00 Dev#=  1 Spd=5000 MxCh= 2
+    if (/^T:.*Bus=([0-9]+).*Dev#= *([0-9]+)/) {
+	$bus = int($1);
+	$device = int($2);
+    } elsif (/^S: +(.*$match.*)/) {
+	$name = $1;
+	print "Found device '$name' (bus $bus, device $device).\n";
+	last;
+    }
+}
+close DEVS;
+
+if (! $name) {
+    print "Couldn't find a match for $match in $device_file.\n";
+    exit;
+}
+
+$SIG{ALRM} = sub {
+    printf "%.1f b/s\n", $data/$duration;
+    exit;
+};
+
+alarm $duration;
+
+open(DATA, "/sys/kernel/debug/usb/usbmon/${bus}u") || die;
+
+while (<DATA>) {
+    # A data line looks like
+    # ffff88011aa7d240 27289464 S Bo:2:008:1 -115 60274 = af6b0e5b 08000729 21294129 42316121 21210018 c0010918 a020c020 e1210120
+    if (/^[0-9a-f]+ [0-9]+ [A-Z] [A-Za-z]+:[0-9]+:([0-9]+)/) {
+	$this_device = int($1);
+	if ($this_device == $device) {
+	    $data += length($_);
+	}
+    }
+}
