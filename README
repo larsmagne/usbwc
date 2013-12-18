@@ -1,0 +1,8 @@
+To set up the proper permissions, use the following udev rules:
+
+potato:~# cat /etc/udev/rules.d/99-usbmon.rules 
+SUBSYSTEM=="usb", ACTION=="add", RUN+="/home/larsi/src/usbwc/usbmon-permissions"
+
+
+mount -t debugfs none_debugs /sys/kernel/debug
+modprobe usbmon

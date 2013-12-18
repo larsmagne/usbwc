@@ -1,0 +1,4 @@
+#!/bin/bash
+
+chgrp larsi /sys/kernel/debug/usb/usbmon/*u
+chmod g+r /sys/kernel/debug/usb/usbmon/*u
